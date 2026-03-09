@@ -1,0 +1,20 @@
+[package]
+name = "sing-box-for-windows"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+name = "sing_box_for_windows_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+ureq = "3"
+tokio = { version = "1", features = ["full"] }
