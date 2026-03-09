@@ -1,8 +1,12 @@
-use tauri::Manager;
+use std::collections::HashMap;
 
+mod clash_api;
 mod config;
+mod proxy;
 mod singbox;
 mod tray;
+
+// === Service commands ===
 
 #[tauri::command]
 fn get_service_status() -> String {
@@ -24,6 +28,8 @@ fn start_service(app: tauri::AppHandle, config_path: Option<String>) -> Result<S
 fn stop_service() -> Result<String, String> {
     singbox::stop()
 }
+
+// === Profile commands ===
 
 #[tauri::command]
 fn list_profiles(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
@@ -61,6 +67,63 @@ fn get_config_dir(app: tauri::AppHandle) -> Result<String, String> {
     config::get_config_dir_path(&app)
 }
 
+// === Clash API / Groups commands ===
+
+#[tauri::command]
+fn get_proxy_groups() -> Result<Vec<clash_api::ProxyGroup>, String> {
+    clash_api::get_proxies()
+}
+
+#[tauri::command]
+fn select_proxy(group: String, name: String) -> Result<(), String> {
+    clash_api::select_proxy(&group, &name)
+}
+
+#[tauri::command]
+fn test_proxy_delay(name: String) -> Result<u32, String> {
+    clash_api::test_delay(&name)
+}
+
+#[tauri::command]
+fn get_all_delays() -> Result<HashMap<String, u32>, String> {
+    clash_api::get_all_delays()
+}
+
+// === System commands ===
+
+#[tauri::command]
+fn set_system_proxy(addr: String) -> Result<(), String> {
+    proxy::set_system_proxy(&addr)
+}
+
+#[tauri::command]
+fn clear_system_proxy() -> Result<(), String> {
+    proxy::clear_system_proxy()
+}
+
+#[tauri::command]
+fn get_proxy_status() -> serde_json::Value {
+    serde_json::json!({
+        "enabled": proxy::is_proxy_enabled(),
+        "address": proxy::get_proxy_address(),
+    })
+}
+
+#[tauri::command]
+fn set_autostart(app: tauri::AppHandle, enable: bool) -> Result<(), String> {
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("Failed to get exe path: {}", e))?;
+    let _ = &app; // satisfy unused warning
+    proxy::set_autostart(&exe.display().to_string(), enable)
+}
+
+#[tauri::command]
+fn get_autostart_status() -> bool {
+    proxy::is_autostart_enabled()
+}
+
+// === App entry ===
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -80,6 +143,15 @@ pub fn run() {
             set_active_profile,
             delete_profile,
             get_config_dir,
+            get_proxy_groups,
+            select_proxy,
+            test_proxy_delay,
+            get_all_delays,
+            set_system_proxy,
+            clear_system_proxy,
+            get_proxy_status,
+            set_autostart,
+            get_autostart_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
