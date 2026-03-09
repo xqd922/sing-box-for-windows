@@ -1,0 +1,64 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: Build Windows Installer
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: "sing-box for Windows v__VERSION__"
+          releaseBody: |
+            ## sing-box for Windows v__VERSION__
+
+            ### Downloads
+            - **NSIS Installer** (.exe) — Recommended
+            - **MSI Installer** (.msi)
+
+            ### Requirements
+            - Windows 10/11 (x64)
+            - [sing-box](https://github.com/SagerNet/sing-box/releases) binary in PATH or app config directory
+
+            ### What's included
+            - Dashboard with service start/stop
+            - Profile management (local & remote subscription)
+            - Proxy group selection with delay testing
+            - System proxy toggle
+            - Autostart support
+            - System tray
+          releaseDraft: false
+          prerelease: false
